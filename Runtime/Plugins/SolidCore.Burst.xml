@@ -1,0 +1,137 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SolidCore.Burst</name>
+    </assembly>
+    <members>
+        <member name="T:SolidCore.Burst.BurstArray`1">
+            <summary>Fixed-length array in unmanaged memory. Not GC-tracked; caller must <see cref="M:SolidCore.Burst.BurstArray`1.Dispose"/>.</summary>
+        </member>
+        <member name="F:SolidCore.Burst.BurstArray`1.Length">
+            <summary>Element count.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstArray`1.#ctor(System.Int32)">
+            <summary>Allocates <paramref name="length"/> zero-initialized elements.</summary>
+        </member>
+        <member name="P:SolidCore.Burst.BurstArray`1.Item(System.Int32)">
+            <summary>Reference to the element at <paramref name="index"/>. No bounds check.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstArray`1.Dispose">
+            <summary>Frees the backing memory and resets to empty.</summary>
+        </member>
+        <member name="T:SolidCore.Burst.BurstHash">
+            <summary>Allocation-free hashing helpers for unmanaged keys.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstHash.FNV1A64``1(``0@)">
+            <summary>64-bit FNV-1a hash over the raw bytes of <paramref name="key"/>. Processes 8 bytes per step.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstHash.ToIndex(System.UInt64,System.Int32)">
+            <summary>Folds <paramref name="hash"/> to a slot index. Requires power-of-two <paramref name="capacity"/> (masks, no modulo).</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstHash.Equals``1(``0@,``0@)">
+            <summary>Equality of two unmanaged keys via <see cref="M:System.Object.Equals(System.Object)"/>.</summary>
+        </member>
+        <member name="T:SolidCore.Burst.BurstMap`2">
+            <summary>Open-addressed hash map in unmanaged memory using Robin-Hood probing. Not GC-tracked; caller must <see cref="M:SolidCore.Burst.BurstMap`2.Dispose"/>.</summary>
+        </member>
+        <member name="P:SolidCore.Burst.BurstMap`2.Count">
+            <summary>Live entry count.</summary>
+        </member>
+        <member name="P:SolidCore.Burst.BurstMap`2.Capacity">
+            <summary>Current slot count (always a power of two).</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.#ctor(System.Int32,System.Single)">
+            <summary>Allocates buffers rounded up to a power of two (min 4); resizes past <paramref name="maxLoadFactor"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.NextPowerOfTwo(System.Int32)">
+            <summary>Smallest power of two &gt;= <paramref name="x"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.Dispose">
+            <summary>Frees all backing buffers and resets to empty.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.TryAdd(`0@,`1@)">
+            <summary>Inserts the pair; overwrites and returns false if <paramref name="key"/> already exists, else true.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.TryGet(`0@,`1@)">
+            <summary>Retrieves the value for <paramref name="key"/> into <paramref name="value"/>; false if absent.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.GetRef(`0@)">
+            <summary>Reference to the value for <paramref name="key"/>. Throws <see cref="T:System.Collections.Generic.KeyNotFoundException"/> if absent.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstMap`2.Remove(`0@)">
+            <summary>Removes <paramref name="key"/> with backward-shift compaction; false if absent.</summary>
+        </member>
+        <member name="T:BurstList`1">
+            <summary>Growable list in unmanaged memory. Not GC-tracked; caller must <see cref="M:BurstList`1.Dispose"/>.</summary>
+        </member>
+        <member name="F:BurstList`1.Count">
+            <summary>Element count.</summary>
+        </member>
+        <member name="P:BurstList`1.Capacity">
+            <summary>Current allocated slot count.</summary>
+        </member>
+        <member name="P:BurstList`1.IsEmpty">
+            <summary>True when <see cref="F:BurstList`1.Count"/> is zero.</summary>
+        </member>
+        <member name="P:BurstList`1.Data">
+            <summary>Raw pointer to the backing buffer. No bounds check; invalidated by any growth.</summary>
+        </member>
+        <member name="M:BurstList`1.#ctor(System.Int32)">
+            <summary>Allocates <paramref name="capacity"/> zero-initialized slots (min 4).</summary>
+        </member>
+        <member name="P:BurstList`1.Item(System.Int32)">
+            <summary>Reference to the element at <paramref name="index"/>. Throws if out of range.</summary>
+        </member>
+        <member name="M:BurstList`1.Add(`0@)">
+            <summary>Appends <paramref name="value"/>, doubling capacity if full.</summary>
+        </member>
+        <member name="M:BurstList`1.Push(`0@)">
+            <summary>Alias for <see cref="M:BurstList`1.Add(`0@)"/>.</summary>
+        </member>
+        <member name="M:BurstList`1.Pop">
+            <summary>Removes and returns the last element. Throws if empty.</summary>
+        </member>
+        <member name="M:BurstList`1.TryPop(`0@)">
+            <summary>Pops the last element into <paramref name="item"/>; false if empty.</summary>
+        </member>
+        <member name="M:BurstList`1.RemoveLast">
+            <summary>Drops the last element. Throws if empty.</summary>
+        </member>
+        <member name="M:BurstList`1.RemoveAt(System.Int32)">
+            <summary>Removes the element at <paramref name="index"/> in O(1) by swapping in the last (unordered). Throws if out of range.</summary>
+        </member>
+        <member name="M:BurstList`1.Remove(`0@)">
+            <summary>Removes the first matching <paramref name="item"/> (unordered swap); false if absent. O(n) scan.</summary>
+        </member>
+        <member name="M:BurstList`1.Contains(`0@)">
+            <summary>True if <paramref name="item"/> is present. O(n) scan.</summary>
+        </member>
+        <member name="M:BurstList`1.Clear">
+            <summary>Resets to empty; keeps allocated capacity.</summary>
+        </member>
+        <member name="M:BurstList`1.EnsureCapacity(System.Int32)">
+            <summary>Grows to at least <paramref name="capacity"/> slots if larger than current.</summary>
+        </member>
+        <member name="M:BurstList`1.AsSpan">
+            <summary>Read-only view over the live elements. Invalidated by any growth.</summary>
+        </member>
+        <member name="M:BurstList`1.GetEnumerator">
+            <summary>Allocation-free forward enumerator over the live elements.</summary>
+        </member>
+        <member name="T:BurstList`1.Enumerator">
+            <summary>Allocation-free by-ref enumerator over a <see cref="T:BurstList`1"/>.</summary>
+        </member>
+        <member name="M:BurstList`1.Enumerator.#ctor(BurstList{`0})">
+            <summary>Positions before the first element of <paramref name="list"/>.</summary>
+        </member>
+        <member name="M:BurstList`1.Enumerator.MoveNext">
+            <summary>Advances to the next element; false past the end.</summary>
+        </member>
+        <member name="P:BurstList`1.Enumerator.Current">
+            <summary>Reference to the current element. No bounds check.</summary>
+        </member>
+        <member name="M:BurstList`1.Dispose">
+            <summary>Frees the backing memory and resets to empty.</summary>
+        </member>
+    </members>
+</doc>

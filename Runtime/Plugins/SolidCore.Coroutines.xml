@@ -1,0 +1,501 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SolidCore.Coroutines</name>
+    </assembly>
+    <members>
+        <member name="T:SolidCore.Coroutines.CoroutineAllocator">
+            <summary>Owns and recycles the native memory backing instruction sequences (flyweight templates + rent/return buffer pool). Zero-GC, thread-safe (all mutators locked); sole owner, frees everything once in <see cref="M:SolidCore.Coroutines.CoroutineAllocator.Dispose"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineAllocator.#ctor(System.Int32)">
+            <summary>Creates an allocator with tracking capacity for <paramref name="initialCapacity"/> buffers.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineAllocator.OwnedBufferCount">
+            <summary>Total number of native buffers this allocator currently owns.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineAllocator.CreateTemplate(System.ReadOnlySpan{SolidCore.Coroutines.YieldInstructionData})">
+            <summary>Builds a reusable immutable template owned by the allocator; spawn from it any number of times.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineAllocator.Prewarm(System.Int32,System.Int32)">
+            <summary>Pre-builds <paramref name="count"/> pooled buffers of <paramref name="instructionLength"/> so a later <see cref="M:SolidCore.Coroutines.CoroutineAllocator.Rent(System.Int32)"/> avoids native allocation.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineAllocator.Rent(System.Int32)">
+            <summary>Rents a buffer of exactly <paramref name="length"/> instructions, recycling a returned one when available; <see cref="M:SolidCore.Coroutines.CoroutineAllocator.Return(SolidCore.Coroutines.InstructionSequence)"/> it when done.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineAllocator.Return(SolidCore.Coroutines.InstructionSequence)">
+            <summary>Returns a rented buffer to the pool for reuse. Does not free native memory.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineAllocator.Dispose">
+            <summary>Frees every owned native buffer exactly once; safe to call more than once.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineHandle">
+            <summary>Value-type identifier for a coroutine instance (slot index + generation version).</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineHandle.Index">
+            <summary>Slot index into the scheduler's state array.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineHandle.Version">
+            <summary>Generation, invalidating stale handles when a slot is recycled.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineHandle.IsValid">
+            <summary>True when the handle references a real slot.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineHandle.#ctor(System.Int32,System.Int32)">
+            <summary>Creates a handle for the given slot <paramref name="index"/> and <paramref name="version"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineHandle.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineSpawnRequest">
+            <summary>Unit of work: spawn <see cref="F:SolidCore.Coroutines.CoroutineSpawnRequest.Count"/> instances of one shared <see cref="F:SolidCore.Coroutines.CoroutineSpawnRequest.Template"/>; count-only cost, zero per-instance allocation.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineSpawnRequest.Template">
+            <summary>Shared flyweight template every spawned instance runs.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineSpawnRequest.Count">
+            <summary>How many instances to spawn (clamped to at least 1).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineSpawnRequest.#ctor(SolidCore.Coroutines.InstructionSequence,System.Int32)">
+            <summary>Creates a request to spawn <paramref name="count"/> instances of <paramref name="template"/> (min 1).</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineJobSystem">
+            <summary>Multi-threaded coroutine entry point: pool of lock-free <see cref="T:SolidCore.Coroutines.CoroutineWorker"/> shards over a shared <see cref="T:SolidCore.Coroutines.CoroutineAllocator"/>, driven fork/join. Call scheduling/tick methods from one owning thread; workers are idle between ticks.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.#ctor(System.Int32,System.Int32)">
+            <param name="workerCount">Number of shards/threads. <c>0</c> ⇒ <c>ProcessorCount - 1</c>.</param>
+            <param name="shardCapacity">Coroutines preallocated per shard (wave preallocation).</param>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Create(System.Int32,System.Int32)">
+            <summary>Creates a job system preallocated for <paramref name="expectedPeak"/> concurrent coroutines with auto-sized workers.</summary>
+            <param name="expectedPeak">Approximate max concurrent coroutines (0 = small default).</param>
+            <param name="workerCount">Threads/shards (0 = ProcessorCount - 1).</param>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Sequence(System.Int32)">
+            <summary>Starts a builder bound to this system's allocator (finish with no-arg <see cref="M:SolidCore.Coroutines.SequenceBuilder.Build"/>).</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineJobSystem.WorkerCount">
+            <summary>Number of worker threads / shards.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineJobSystem.Allocator">
+            <summary>The shared template/buffer allocator. Build your templates from this.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineJobSystem.ActiveCount">
+            <summary>Total live coroutines across all shards. Call between frames (workers idle).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Schedule(SolidCore.Coroutines.CoroutineSpawnRequest@)">
+            <summary>Distributes <c>request.Count</c> instances evenly across shards; creation runs on worker threads next flush/tick.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Schedule(SolidCore.Coroutines.InstructionSequence,System.Int32)">
+            <summary>Convenience overload of <see cref="M:SolidCore.Coroutines.CoroutineJobSystem.Schedule(SolidCore.Coroutines.CoroutineSpawnRequest@)"/> for a template + count.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.ScheduleOn(System.Int32,SolidCore.Coroutines.InstructionSequence,System.Int32)">
+            <summary>Spawns all <paramref name="count"/> instances onto one specific shard.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.FlushSpawns">
+            <summary>Creates all queued coroutines in parallel without ticking, to front-load a wave's creation cost.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.TickParallel(System.Single)">
+            <summary>Advances every shard by <paramref name="deltaTime"/> concurrently then joins — one parallel frame. Drains pending spawns first.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Spawn(SolidCore.Coroutines.InstructionSequence,System.Int32)">
+            <summary>Spawns <paramref name="count"/> instances fanned across shards. Alias for <see cref="M:SolidCore.Coroutines.CoroutineJobSystem.Schedule(SolidCore.Coroutines.InstructionSequence,System.Int32)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.SpawnOne(SolidCore.Coroutines.InstructionSequence)">
+            <summary>Spawns a single instance of <paramref name="template"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Tick(System.Single)">
+            <summary>Advances one frame in parallel (pending spawns created first). Game-loop alias for <see cref="M:SolidCore.Coroutines.CoroutineJobSystem.TickParallel(System.Single)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.RunToCompletion(System.Single,System.Int32)">
+            <summary>Ticks in parallel until all coroutines finish or <paramref name="maxTicks"/> is reached; returns ticks executed.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.SpawnAndRun(SolidCore.Coroutines.InstructionSequence,System.Int32,System.Single)">
+            <summary>Spawns a wave and runs it to completion in one call.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.GetDiagnostics">
+            <summary>Merged statistics across all shards. Call between frames (workers idle).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineJobSystem.Dispose">
+            <summary>Stops all workers and frees the shared allocator.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineRunner">
+            <summary>Single-threaded coroutine front door (counterpart to <see cref="T:SolidCore.Coroutines.CoroutineJobSystem"/>): owns a <see cref="T:SolidCore.Coroutines.CoroutineScheduler"/> + <see cref="T:SolidCore.Coroutines.CoroutineAllocator"/> so you never touch native buffers; freed on <see cref="M:SolidCore.Coroutines.CoroutineRunner.Dispose"/>.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineRunner.Current">
+            <summary>Runner currently ticking on this thread (or null); lets an unmanaged action spawn via <see cref="M:SolidCore.Coroutines.CoroutineRuntime.SpawnLocal(SolidCore.Coroutines.InstructionSequence)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.#ctor(System.Int32)">
+            <summary>Creates a runner with its scheduler prewarmed for <paramref name="capacity"/> coroutines.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Create(System.Int32)">
+            <summary>Creates a runner preallocated for a known peak coroutine count.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRunner.Allocator">
+            <summary>The owned template/buffer allocator. Build your templates from this.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRunner.ActiveCount">
+            <summary>Live coroutine count. O(1).</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRunner.TotalStarted">
+            <summary>Coroutines started over this runner's lifetime.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRunner.TotalCompleted">
+            <summary>Coroutines completed over this runner's lifetime.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRunner.Scheduler">
+            <summary>Direct access to the underlying scheduler for advanced use.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Sequence(System.Int32)">
+            <summary>Starts a fluent builder bound to this runner's allocator (no-arg Build()).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Start(SolidCore.Coroutines.InstructionSequence)">
+            <summary>Starts one coroutine instance and returns its handle.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Start(SolidCore.Coroutines.InstructionSequence,System.Int32)">
+            <summary>Starts <paramref name="count"/> instances of a shared template.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Stop(SolidCore.Coroutines.CoroutineHandle)">
+            <summary>Stops a running coroutine by handle.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Tick(System.Single)">
+            <summary>Advances the simulation one frame. Call this in your game loop.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.RunToCompletion(System.Single,System.Int32)">
+            <summary>Ticks until all coroutines finish or <paramref name="maxTicks"/> is hit; returns ticks executed. Starts are immediate — no flush needed.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.StartAndRun(SolidCore.Coroutines.InstructionSequence,System.Int32,System.Single)">
+            <summary>Starts a wave and runs it to completion in one call.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.GetPerformanceSummary">
+            <summary>Formatted performance summary from the underlying scheduler.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.Dispose">
+            <summary>Frees the scheduler and allocator.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineScheduler">
+            <summary>Single-shard, zero-GC coroutine scheduler over contiguous native state; O(1) active count, incremental compaction. Not thread-safe — one owning thread per instance.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.TotalTicks">
+            <summary>Total ticks executed.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.TotalInstructions">
+            <summary>Total instructions executed across all ticks.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.TotalCoroutinesStarted">
+            <summary>Coroutines started over this scheduler's lifetime.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.TotalCoroutinesCompleted">
+            <summary>Coroutines completed over this scheduler's lifetime.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.LastTickTimeMs">
+            <summary>Wall-clock cost of the most recent tick, in ms.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.PeakTickTimeMs">
+            <summary>Worst single tick observed, in ms.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineScheduler.TotalTickTimeMs">
+            <summary>Summed tick time over this scheduler's lifetime, in ms.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineScheduler.ActiveCount">
+            <summary>Live (running/waiting) coroutine count. O(1) — maintained incrementally.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.#ctor(System.Int32)">
+            <summary>Allocates scheduler state for <paramref name="initialCapacity"/> coroutines.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.Dispose">
+            <summary>Frees all native backing lists.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.Prewarm(System.Int32)">
+            <summary>Reserves capacity for <paramref name="count"/> coroutines so a wave spawns without native reallocation.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.Start(SolidCore.Coroutines.InstructionSequence)">
+            <summary>Starts one instance of <paramref name="sequence"/> (reusing a free slot or appending); returns its handle.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.Stop(SolidCore.Coroutines.CoroutineHandle)">
+            <summary>Stops a running coroutine by handle; ignored if already completing or stale.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.Update(System.Single)">
+            <summary>Advances all live coroutines by <paramref name="deltaTime"/> one frame, then compacts freed slots.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.GetPerformanceSummary">
+            <summary>Formatted single-shard performance summary.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.GetUnityComparisonEstimate">
+            <summary>Estimated Unity GC/CPU cost vs this scheduler, for comparison.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineStatus">
+            <summary>Lifecycle status of a coroutine slot.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineStatus.Inactive">
+            <summary>Free slot, not running.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineStatus.Running">
+            <summary>Executing instructions.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineStatus.Waiting">
+            <summary>Blocked on a yield instruction.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineStatus.Completed">
+            <summary>Finished; awaiting compaction.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineState">
+            <summary>Per-instance coroutine state, stored contiguously for DoD-friendly scheduling.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.Index">
+            <summary>Slot index.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.Version">
+            <summary>Generation, matched against a handle's version.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.Status">
+            <summary>Lifecycle status.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.InstructionIndex">
+            <summary>Current position in the instruction sequence.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.TimeAccumulator">
+            <summary>Elapsed time for the active time-based wait.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.FrameCounter">
+            <summary>Elapsed ticks for the active frame-based wait.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.PendingRemoval">
+            <summary>Marked done this tick; reclaimed on compaction.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineState.IsPaused">
+            <summary>Skipped while set.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineState.Reset(System.Int32,System.Int32)">
+            <summary>Reinitializes this slot to a fresh running state for the given <paramref name="index"/>/<paramref name="version"/>.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineWorker">
+            <summary>Persistent background thread owning one lock-free <see cref="T:SolidCore.Coroutines.CoroutineScheduler"/> shard; the job system kicks/joins it fork-join each frame. A coroutine lives on one shard for life, so ticks touch no shared memory.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineWorker.Current">
+            <summary>Worker whose shard is ticking on this thread (or null); read by <see cref="T:SolidCore.Coroutines.CoroutineRuntime"/> for local spawns.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineWorker.Id">
+            <summary>Shard/worker index.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.#ctor(System.Int32,System.Int32)">
+            <summary>Creates worker <paramref name="id"/> with a shard prewarmed for <paramref name="shardCapacity"/> coroutines, and starts its thread.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineWorker.ActiveCount">
+            <summary>Live coroutine count on this shard. Read between frames (workers idle).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.Enqueue(SolidCore.Coroutines.CoroutineSpawnRequest@)">
+            <summary>Queues a spawn request to be created on this worker's thread next tick.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.StartLocal(SolidCore.Coroutines.InstructionSequence)">
+            <summary>
+            Spawns a coroutine into this shard immediately. Only valid from this worker's own thread
+            (i.e. from inside a <c>Yield.Do</c> action during a tick). See <see cref="F:SolidCore.Coroutines.CoroutineWorker.Current"/>.
+            </summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.Kick(System.Single,System.Boolean)">
+            <summary>Signals the worker to run one frame. <paramref name="drainOnly"/> creates queued
+            coroutines without ticking (used to parallelise creation as a separate phase).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.Join">
+            <summary>Blocks until the worker finishes the frame started by <see cref="M:SolidCore.Coroutines.CoroutineWorker.Kick(System.Single,System.Boolean)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.Accumulate(SolidCore.Coroutines.CoroutineDiagnostics@)">
+            <summary>Folds this shard's counters into a diagnostics snapshot. Call between frames.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineWorker.Dispose">
+            <summary>Stops the worker thread and frees its shard and buffers.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.InstructionSequence">
+            <summary>Immutable instruction buffer in native memory, shared as a flyweight template across many coroutine instances. Owned/freed by <see cref="T:SolidCore.Coroutines.CoroutineAllocator"/>.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.InstructionSequence.Instructions">
+            <summary>Backing native instruction buffer.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.InstructionSequence.#ctor(SolidCore.Burst.BurstArray{SolidCore.Coroutines.YieldInstructionData})">
+            <summary>Wraps an existing native instruction buffer.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.InstructionSequence.Get(System.Int32)">
+            <summary>Returns the instruction at <paramref name="index"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.InstructionSequence.IsComplete(System.Int32)">
+            <summary>True when <paramref name="index"/> is past the last instruction.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.Yield">
+            <summary>Factory for <see cref="T:SolidCore.Coroutines.YieldInstructionData"/> yield instructions.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.Yield.WaitForSeconds(System.Single)">
+            <summary>Yields until <paramref name="duration"/> seconds of simulated time elapse.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.Yield.WaitForFrames(System.Int32)">
+            <summary>Yields for <paramref name="frames"/> scheduler ticks.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.Yield.WaitUntil()">
+            <summary>Yields until the unmanaged <paramref name="predicate"/> returns non-zero.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.Yield.Do()">
+            <summary>Runs the unmanaged <paramref name="action"/>, then advances.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.SequenceBuilder">
+            <summary>Fluent, authoring-time builder for an <see cref="T:SolidCore.Coroutines.InstructionSequence"/>; bakes into an allocator-owned template via <see cref="M:SolidCore.Coroutines.SequenceBuilder.Build(SolidCore.Coroutines.CoroutineAllocator)"/>, which frees the scratch buffer.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.#ctor(System.Int32)">
+            <summary>Creates an unbound builder; finish with <see cref="M:SolidCore.Coroutines.SequenceBuilder.Build(SolidCore.Coroutines.CoroutineAllocator)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.#ctor(SolidCore.Coroutines.CoroutineAllocator,System.Int32)">
+            <summary>Creates a builder pre-bound to an allocator so <see cref="M:SolidCore.Coroutines.SequenceBuilder.Build"/> takes no args.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.SequenceBuilder.Count">
+            <summary>Number of instructions added so far.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.Add(SolidCore.Coroutines.YieldInstructionData@)">
+            <summary>Appends a raw instruction (use the typed helpers below where possible).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.Do()">
+            <summary>Runs an unmanaged action immediately, then advances to the next step.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitForSeconds(System.Single)">
+            <summary>Waits for <paramref name="seconds"/> of simulated time before advancing.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitForFrames(System.Int32)">
+            <summary>Waits for <paramref name="frames"/> scheduler ticks before advancing.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitUntil()">
+            <summary>Blocks until the unmanaged predicate returns a non-zero byte.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.Build(SolidCore.Coroutines.CoroutineAllocator)">
+            <summary>Bakes accumulated steps into an allocator-owned template and frees scratch memory; not reusable afterwards.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.Build">
+            <summary>Bakes into the allocator this builder was bound to; throws if unbound.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.Dispose">
+            <summary>Frees scratch memory if the builder was never built.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.YieldInstructionData">
+            <summary>Blittable tagged union describing one yield instruction; <see cref="F:SolidCore.Coroutines.YieldInstructionData.Type"/> selects the active payload.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionData.Type">
+            <summary>Which instruction this record encodes.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionData.Float0">
+            <summary>Float payload (e.g. wait duration in seconds).</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionData.Int0">
+            <summary>Int payload (e.g. frame count).</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionData.Predicate">
+            <summary>Unmanaged predicate for <see cref="F:SolidCore.Coroutines.YieldInstructionType.WaitUntil"/>.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionData.Action">
+            <summary>Unmanaged action for <see cref="F:SolidCore.Coroutines.YieldInstructionType.Do"/>.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.YieldInstructionType">
+            <summary>Discriminator selecting the active payload of <see cref="T:SolidCore.Coroutines.YieldInstructionData"/>.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionType.None">
+            <summary>No-op; advances immediately.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionType.WaitForSeconds">
+            <summary>Wait a duration in simulated seconds.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionType.WaitForFrames">
+            <summary>Wait a number of scheduler ticks.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionType.WaitUntil">
+            <summary>Wait until an unmanaged predicate returns non-zero.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.YieldInstructionType.Do">
+            <summary>Run an unmanaged action, then advance.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineDiagnostics">
+            <summary>Merged cross-shard snapshot of a <see cref="T:SolidCore.Coroutines.CoroutineJobSystem"/>'s stats (counts summed, timings max/sum); gather between frames via <see cref="M:SolidCore.Coroutines.CoroutineJobSystem.GetDiagnostics"/>.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.ShardCount">
+            <summary>Number of worker shards contributing to this snapshot.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.ActiveCount">
+            <summary>Live (non-completed, non-inactive) coroutines across all shards.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.TotalStarted">
+            <summary>Coroutines started, summed across shards.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.TotalCompleted">
+            <summary>Coroutines completed, summed across shards.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.TotalInstructions">
+            <summary>Instructions executed, summed across shards.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.TotalTicks">
+            <summary>Highest tick count among shards (they advance in lock-step).</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.AggregateCpuTimeMs">
+            <summary>Sum of per-shard CPU time — total work done across all worker threads.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.CriticalPathMs">
+            <summary>Slowest shard's accumulated tick time — the parallel frame's critical-path cost.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineDiagnostics.PeakTickMs">
+            <summary>Worst single tick observed on any shard.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineDiagnostics.Add(System.Int32,SolidCore.Coroutines.CoroutineScheduler@)">
+            <summary>Folds one shard's scheduler counters into this snapshot.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineDiagnostics.ThroughputPerSecond">
+            <summary>Instructions executed per second of wall-clock (critical-path) time.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineDiagnostics.ParallelSpeedup">
+            <summary>Parallel efficiency: aggregate CPU work ÷ critical-path time (≈ shard count when ideal).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineDiagnostics.Summary">
+            <summary>Formatted multi-line report of this snapshot.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineDiagnostics.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineRuntime">
+            <summary>Helpers callable from inside a running coroutine (unmanaged action) to spawn into the shard/runner currently ticking on this thread — lock-free, never crosses a thread boundary.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRuntime.HasCurrentShard">
+            <summary>True when called from within a ticking scheduler (worker shard or single-threaded runner).</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineRuntime.CurrentShardId">
+            <summary>Id of the shard currently executing on this thread, or <c>-1</c> (also -1 for a single-threaded runner).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRuntime.SpawnLocal(SolidCore.Coroutines.InstructionSequence)">
+            <summary>Spawns one instance of <paramref name="template"/> into the scheduler ticking on this thread; false (no-op) if outside a tick.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRuntime.SpawnLocal(SolidCore.Coroutines.InstructionSequence,System.Int32)">
+            <summary>Spawns <paramref name="count"/> instances into the scheduler ticking on this thread; false (no-op) if outside a tick.</summary>
+        </member>
+        <member name="T:SolidCore.Coroutines.CoroutineTime">
+            <summary>Deterministic fixed-timestep clock for driving schedulers (accumulator pattern); pure value type, zero-alloc, so all shards advance on the same delta.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineTime.FixedDeltaTime">
+            <summary>The fixed simulation step, in seconds (e.g. 1/60 for 60 Hz).</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineTime.Accumulator">
+            <summary>Unconsumed real time carried over between frames.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineTime.TotalTime">
+            <summary>Total simulated time, in seconds, across all executed fixed steps.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineTime.FrameCount">
+            <summary>Number of fixed steps executed so far.</summary>
+        </member>
+        <member name="F:SolidCore.Coroutines.CoroutineTime.MaxStepsPerFrame">
+            <summary>Cap on fixed steps per <see cref="M:SolidCore.Coroutines.CoroutineTime.Accumulate(System.Single)"/> call; prevents the spiral of death after a stall.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineTime.#ctor(System.Single,System.Int32)">
+            <summary>Creates a clock at <paramref name="fixedDeltaTime"/> seconds/step, capped at <paramref name="maxStepsPerFrame"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineTime.Accumulate(System.Single)">
+            <summary>Feeds real elapsed time and returns how many fixed steps to run; leftover stays in <see cref="F:SolidCore.Coroutines.CoroutineTime.Accumulator"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineTime.Step">
+            <summary>Advances the simulation clock by one fixed step. Call once per executed step.</summary>
+        </member>
+        <member name="P:SolidCore.Coroutines.CoroutineTime.Alpha">
+            <summary>Interpolation factor [0,1) for smoothing rendering between fixed steps.</summary>
+        </member>
+    </members>
+</doc>

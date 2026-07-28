@@ -1,0 +1,8 @@
+{
+  "name": "com.solidcore.coroutines",
+  "version": "0.1.0",
+  "displayName": "SolidCore Coroutines",
+  "description": "Zero-allocation, struct-based coroutine scheduler for Unity — a single-threaded runner and a multi-threaded job system that tick thousands of coroutines with no GC. Standalone: depends only on the bundled SolidCore.Burst.",
+  "unity": "6000.0",
+  "author": "Aaron Grincewicz"
+}

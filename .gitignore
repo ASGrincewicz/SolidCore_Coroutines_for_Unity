@@ -1,0 +1,18 @@
+# Unity / IDE cruft (this repo is a UPM package, not a full Unity project)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Ll]ogs/
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.user
+.DS_Store
+
+# Ship the bundled assemblies and their docs/meta
+!Runtime/Plugins/*.dll
+!Runtime/Plugins/*.xml
+!Runtime/Plugins/*.meta
