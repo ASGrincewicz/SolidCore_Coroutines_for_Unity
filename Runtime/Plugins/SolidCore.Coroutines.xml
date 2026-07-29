@@ -161,10 +161,39 @@
             <summary>Advances the simulation one frame. Call this in your game loop.</summary>
         </member>
         <member name="M:SolidCore.Coroutines.CoroutineRunner.RunToCompletion(System.Single,System.Int32)">
-            <summary>Ticks until all coroutines finish or <paramref name="maxTicks"/> is hit; returns ticks executed. Starts are immediate — no flush needed.</summary>
+            <summary>
+            Headless drain: ticks as fast as the CPU allows — advancing <em>simulated</em> time by
+            <paramref name="deltaTime"/> per tick — until all coroutines finish or <paramref name="maxTicks"/>
+            is hit; returns ticks executed. Starts are immediate — no flush needed.
+            <para>
+            This does <b>not</b> wait in real time: a <c>WaitForSeconds(2)</c> completes in microseconds
+            (~120 back-to-back ticks). Use it for tests/batch simulation. For wall-clock waiting, use
+            <see cref="M:SolidCore.Coroutines.CoroutineRunner.RunRealtime(System.Single,System.Single)"/>; in a game loop, call <see cref="M:SolidCore.Coroutines.CoroutineRunner.Tick(System.Single)"/> once per frame instead.
+            </para>
+            </summary>
         </member>
         <member name="M:SolidCore.Coroutines.CoroutineRunner.StartAndRun(SolidCore.Coroutines.InstructionSequence,System.Int32,System.Single)">
-            <summary>Starts a wave and runs it to completion in one call.</summary>
+            <summary>
+            Starts a wave and drains it headless in one call. Advances <em>simulated</em> time as fast as
+            the CPU allows — it does <b>not</b> wait in real time. Use <see cref="M:SolidCore.Coroutines.CoroutineRunner.StartAndRunRealtime(SolidCore.Coroutines.InstructionSequence,System.Int32,System.Single,System.Single)"/>
+            for wall-clock waiting.
+            </summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.RunRealtime(System.Single,System.Single)">
+            <summary>
+            Real-time pump: advances the scheduler in fixed <paramref name="fixedDeltaTime"/> steps paced by
+            actual wall-clock time (via <see cref="T:SolidCore.Coroutines.CoroutineTime"/>), so <c>WaitForSeconds(2)</c> blocks ~2 real
+            seconds. Sleeps between polls rather than busy-spinning, and runs until all coroutines finish or
+            <paramref name="maxSeconds"/> elapses (<c>0</c> = no timeout). Returns fixed steps executed.
+            <para>Blocks the calling thread. In a game loop, call <see cref="M:SolidCore.Coroutines.CoroutineRunner.Tick(System.Single)"/> once per frame instead.</para>
+            </summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineRunner.StartAndRunRealtime(SolidCore.Coroutines.InstructionSequence,System.Int32,System.Single,System.Single)">
+            <summary>
+            Starts <paramref name="count"/> instance(s) and runs them in real time (see <see cref="M:SolidCore.Coroutines.CoroutineRunner.RunRealtime(System.Single,System.Single)"/>):
+            the wall-clock mirror of <see cref="M:SolidCore.Coroutines.CoroutineRunner.StartAndRun(SolidCore.Coroutines.InstructionSequence,System.Int32,System.Single)"/>, so <c>WaitForSeconds</c> actually waits.
+            Returns fixed steps executed.
+            </summary>
         </member>
         <member name="M:SolidCore.Coroutines.CoroutineRunner.GetPerformanceSummary">
             <summary>Formatted performance summary from the underlying scheduler.</summary>
