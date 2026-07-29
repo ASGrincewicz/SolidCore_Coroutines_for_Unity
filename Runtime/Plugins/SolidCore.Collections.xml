@@ -1,0 +1,155 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SolidCore.Collections</name>
+    </assembly>
+    <members>
+        <member name="T:SolidCore.Collections.FastList`1">
+            <summary>Growable array with ref-return indexing and O(1) unordered removal. Not thread-safe.</summary>
+        </member>
+        <member name="F:SolidCore.Collections.FastList`1._count">
+            <summary>Element count. Public for hot-path access; do not mutate directly.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.FastList`1.Count">
+            <summary>Number of elements.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.FastList`1.Capacity">
+            <summary>Current backing-array length.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.FastList`1.IsEmpty">
+            <summary>True if empty.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.#ctor(System.Int32)">
+            <summary>Creates a list; capacity below 1 falls back to the default.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.FastList`1.Item(System.Int32)">
+            <summary>Reference to the element at <paramref name="index"/>. Bounds-checked; throws if out of range.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Add(`0)">
+            <summary>Appends <paramref name="item"/>; doubles capacity when full. O(1) amortized.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Push(`0)">
+            <summary>Alias for <see cref="M:SolidCore.Collections.FastList`1.Add(`0)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Pop">
+            <summary>Removes and returns the last element. Throws if empty.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.TryPop(`0@)">
+            <summary>Pops the last element; false if empty.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.RemoveLast">
+            <summary>Discards the last element. Throws if empty.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Clear">
+            <summary>Clears all elements to default(T).</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.RemoveAt(System.Int32)">
+            <summary>Removes the element at <paramref name="index"/> by swapping in the last. O(1), does not preserve order.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Contains(`0)">
+            <summary>True if <paramref name="item"/> is present. Linear search, O(n).</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Remove(`0)">
+            <summary>Removes the first occurrence of <paramref name="item"/> via unordered removal; true if found. O(n).</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.AsSpan">
+            <summary>Read-only view over the live elements. Invalidated by any mutation.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.EnsureCapacity(System.Int32)">
+            <summary>Grows the backing array to hold at least <paramref name="capacity"/>; no-op if already large enough.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.GetEnumerator">
+            <summary>Ref-returning struct enumerator; zero-alloc.</summary>
+        </member>
+        <member name="T:SolidCore.Collections.FastList`1.Enumerator">
+            <summary>Ref-returning struct enumerator over the live elements.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Enumerator.#ctor(SolidCore.Collections.FastList{`0})">
+            <summary>Creates an enumerator positioned before the first element.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.FastList`1.Enumerator.MoveNext">
+            <summary>Advances; false past the last element.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.FastList`1.Enumerator.Current">
+            <summary>Reference to the current element. No bounds check.</summary>
+        </member>
+        <member name="T:SolidCore.Collections.IndexMap`2">
+            <summary>Thin keyed store over <see cref="T:System.Collections.Generic.Dictionary`2"/> exposing a stable indexing API.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.#ctor">
+            <summary>Creates an empty map.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.#ctor(System.Int32)">
+            <summary>Creates an empty map with the given initial capacity.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.IndexMap`2.Item(`0)">
+            <summary>Gets or sets the value for <paramref name="key"/>. Getter throws if absent.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.TryGetValue(`0,`1@)">
+            <summary>Gets the value for <paramref name="key"/>; false if absent.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.Set(`0,`1)">
+            <summary>Inserts or overwrites the value for <paramref name="key"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.Remove(`0)">
+            <summary>Removes the entry for <paramref name="key"/>; true if it existed.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.IndexMap`2.Items">
+            <summary>All key/value pairs, in unspecified order.</summary>
+        </member>
+        <member name="P:SolidCore.Collections.IndexMap`2.Count">
+            <summary>Number of entries.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.Clear">
+            <summary>Removes all entries.</summary>
+        </member>
+        <member name="M:SolidCore.Collections.IndexMap`2.ContainsKey(`0)">
+            <summary>True if <paramref name="key"/> is present.</summary>
+        </member>
+        <member name="T:SolidCore.Query.IRefEnumerator`1">
+            <summary>Minimal ref-returning enumerator contract; enables zero-copy, in-place iteration and composable query pipelines.</summary>
+        </member>
+        <member name="M:SolidCore.Query.IRefEnumerator`1.MoveNext">
+            <summary>Advances to the next element; false when exhausted.</summary>
+        </member>
+        <member name="P:SolidCore.Query.IRefEnumerator`1.Current">
+            <summary>Reference to the current element. Valid only after a successful <see cref="M:SolidCore.Query.IRefEnumerator`1.MoveNext"/>.</summary>
+        </member>
+        <member name="T:SolidCore.Query.QueryExtensions">
+            <summary>LINQ-style Where/Select operators for SolidCore collections; composable, zero-alloc, ref-returning.</summary>
+        </member>
+        <member name="M:SolidCore.Query.QueryExtensions.Where``1(SolidCore.Collections.FastList{``0},System.Func{``0,System.Boolean})">
+            <summary>Filters <paramref name="list"/> by <paramref name="predicate"/>. Zero-alloc, ref-returning.</summary>
+        </member>
+        <member name="M:SolidCore.Query.QueryExtensions.Select``2(SolidCore.Collections.FastList{``0},System.Func{``0,``1})">
+            <summary>Projects each element of <paramref name="list"/> via <paramref name="selector"/>. Zero-alloc.</summary>
+        </member>
+        <member name="M:SolidCore.Query.QueryExtensions.Select``2(SolidCore.Query.WhereEnumerator{``0},System.Func{``0,``1})">
+            <summary>Projects a filtered result via <paramref name="selector"/>, enabling Where→Select chaining. Zero-alloc.</summary>
+        </member>
+        <member name="T:SolidCore.Query.SelectEnumerator`3">
+            <summary>Projecting enumerator over <typeparamref name="TSource"/>; lazy, zero-alloc. Result returned by value.</summary>
+        </member>
+        <member name="M:SolidCore.Query.SelectEnumerator`3.#ctor(`2,System.Func{`0,`1})">
+            <summary>Wraps <paramref name="source"/>, applying <paramref name="selector"/> to each element.</summary>
+        </member>
+        <member name="M:SolidCore.Query.SelectEnumerator`3.MoveNext">
+            <summary>Advances and projects the next element; false when exhausted.</summary>
+        </member>
+        <member name="P:SolidCore.Query.SelectEnumerator`3.Current">
+            <summary>Projected value from the most recent <see cref="M:SolidCore.Query.SelectEnumerator`3.MoveNext"/>.</summary>
+        </member>
+        <member name="T:SolidCore.Query.WhereEnumerator`1">
+            <summary>Filtering ref-enumerator; lazy, zero-alloc.</summary>
+        </member>
+        <member name="M:SolidCore.Query.WhereEnumerator`1.#ctor(SolidCore.Query.IRefEnumerator{`0},System.Func{`0,System.Boolean})">
+            <summary>Wraps <paramref name="source"/>, yielding only elements matching <paramref name="predicate"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Query.WhereEnumerator`1.MoveNext">
+            <summary>Advances to the next matching element; false when exhausted.</summary>
+        </member>
+        <member name="P:SolidCore.Query.WhereEnumerator`1.Current">
+            <summary>Reference to the current source element.</summary>
+        </member>
+    </members>
+</doc>

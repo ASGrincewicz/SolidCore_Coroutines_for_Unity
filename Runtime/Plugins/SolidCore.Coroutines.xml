@@ -122,7 +122,7 @@
             <summary>Single-threaded coroutine front door (counterpart to <see cref="T:SolidCore.Coroutines.CoroutineJobSystem"/>): owns a <see cref="T:SolidCore.Coroutines.CoroutineScheduler"/> + <see cref="T:SolidCore.Coroutines.CoroutineAllocator"/> so you never touch native buffers; freed on <see cref="M:SolidCore.Coroutines.CoroutineRunner.Dispose"/>.</summary>
         </member>
         <member name="F:SolidCore.Coroutines.CoroutineRunner.Current">
-            <summary>Runner currently ticking on this thread (or null); lets an unmanaged action spawn via <see cref="M:SolidCore.Coroutines.CoroutineRuntime.SpawnLocal(SolidCore.Coroutines.InstructionSequence)"/>.</summary>
+            <summary>Runner currently ticking on this thread (or null); lets a <c>Yield.Do</c> action spawn via <see cref="M:SolidCore.Coroutines.CoroutineRuntime.SpawnLocal(SolidCore.Coroutines.InstructionSequence)"/>.</summary>
         </member>
         <member name="M:SolidCore.Coroutines.CoroutineRunner.#ctor(System.Int32)">
             <summary>Creates a runner with its scheduler prewarmed for <paramref name="capacity"/> coroutines.</summary>
@@ -305,6 +305,43 @@
         <member name="M:SolidCore.Coroutines.CoroutineWorker.Dispose">
             <summary>Stops the worker thread and frees its shard and buffers.</summary>
         </member>
+        <member name="T:SolidCore.Coroutines.CoroutineCallbacks">
+            <summary>
+            Process-wide side table mapping the <see cref="F:SolidCore.Coroutines.YieldInstructionData.CallbackId"/> stored in a
+            blittable instruction back to a managed delegate. Instructions live in native
+            <c>BurstArray</c> memory and therefore cannot hold delegate references directly; this registry
+            is the indirection that lets <see cref="M:SolidCore.Coroutines.Yield.WaitUntil(System.Func{System.Boolean})"/> and
+            <see cref="M:SolidCore.Coroutines.Yield.Do(System.Action)"/> accept ordinary managed callbacks — the form Unity's
+            IL2CPP/Mono runtime supports (unmanaged function pointers are not usable there).
+            </summary>
+            <remarks>
+            Predicates and actions occupy independent 1-based id spaces; id <c>0</c> means "no callback".
+            The resolving <see cref="T:SolidCore.Coroutines.CoroutineScheduler"/> already knows the instruction
+            <see cref="T:SolidCore.Coroutines.YieldInstructionType"/>, so it selects the correct space without the id encoding it.
+            <para>
+            Registration happens at authoring time and resolution happens during a tick — which, under
+            <see cref="T:SolidCore.Coroutines.CoroutineJobSystem"/>, runs on worker threads while authoring may still be appending
+            on another thread. Both paths are guarded by a single lock: correct, and cheap for the primary
+            single-threaded <see cref="T:SolidCore.Coroutines.CoroutineRunner"/> path where callbacks are far rarer than
+            <see cref="F:SolidCore.Coroutines.YieldInstructionType.WaitForSeconds"/>. If the multi-threaded callback path ever
+            becomes hot, switch the read path to a copy-on-write snapshot for lock-free resolution.
+            </para>
+            The table is append-only and never shrinks; delegates registered from authoring-time templates
+            live for the process lifetime.
+            </remarks>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineCallbacks.RegisterPredicate(System.Func{System.Boolean})">
+            <summary>Registers a predicate for <see cref="F:SolidCore.Coroutines.YieldInstructionType.WaitUntil"/>; returns its 1-based id (<c>0</c> if null).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineCallbacks.RegisterAction(System.Action)">
+            <summary>Registers an action for <see cref="F:SolidCore.Coroutines.YieldInstructionType.Do"/>; returns its 1-based id (<c>0</c> if null).</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineCallbacks.GetPredicate(System.Int32)">
+            <summary>Resolves a predicate id; null if <paramref name="id"/> is <c>0</c> or out of range.</summary>
+        </member>
+        <member name="M:SolidCore.Coroutines.CoroutineCallbacks.GetAction(System.Int32)">
+            <summary>Resolves an action id; null if <paramref name="id"/> is <c>0</c> or out of range.</summary>
+        </member>
         <member name="T:SolidCore.Coroutines.InstructionSequence">
             <summary>Immutable instruction buffer in native memory, shared as a flyweight template across many coroutine instances. Owned/freed by <see cref="T:SolidCore.Coroutines.CoroutineAllocator"/>.</summary>
         </member>
@@ -329,11 +366,11 @@
         <member name="M:SolidCore.Coroutines.Yield.WaitForFrames(System.Int32)">
             <summary>Yields for <paramref name="frames"/> scheduler ticks.</summary>
         </member>
-        <member name="M:SolidCore.Coroutines.Yield.WaitUntil()">
-            <summary>Yields until the unmanaged <paramref name="predicate"/> returns non-zero.</summary>
+        <member name="M:SolidCore.Coroutines.Yield.WaitUntil(System.Func{System.Boolean})">
+            <summary>Yields until the managed <paramref name="predicate"/> returns <c>true</c>.</summary>
         </member>
-        <member name="M:SolidCore.Coroutines.Yield.Do()">
-            <summary>Runs the unmanaged <paramref name="action"/>, then advances.</summary>
+        <member name="M:SolidCore.Coroutines.Yield.Do(System.Action)">
+            <summary>Runs the managed <paramref name="action"/>, then advances.</summary>
         </member>
         <member name="T:SolidCore.Coroutines.SequenceBuilder">
             <summary>Fluent, authoring-time builder for an <see cref="T:SolidCore.Coroutines.InstructionSequence"/>; bakes into an allocator-owned template via <see cref="M:SolidCore.Coroutines.SequenceBuilder.Build(SolidCore.Coroutines.CoroutineAllocator)"/>, which frees the scratch buffer.</summary>
@@ -350,8 +387,8 @@
         <member name="M:SolidCore.Coroutines.SequenceBuilder.Add(SolidCore.Coroutines.YieldInstructionData@)">
             <summary>Appends a raw instruction (use the typed helpers below where possible).</summary>
         </member>
-        <member name="M:SolidCore.Coroutines.SequenceBuilder.Do()">
-            <summary>Runs an unmanaged action immediately, then advances to the next step.</summary>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.Do(System.Action)">
+            <summary>Runs a managed action immediately, then advances to the next step.</summary>
         </member>
         <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitForSeconds(System.Single)">
             <summary>Waits for <paramref name="seconds"/> of simulated time before advancing.</summary>
@@ -359,8 +396,8 @@
         <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitForFrames(System.Int32)">
             <summary>Waits for <paramref name="frames"/> scheduler ticks before advancing.</summary>
         </member>
-        <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitUntil()">
-            <summary>Blocks until the unmanaged predicate returns a non-zero byte.</summary>
+        <member name="M:SolidCore.Coroutines.SequenceBuilder.WaitUntil(System.Func{System.Boolean})">
+            <summary>Blocks until the managed predicate returns <c>true</c>.</summary>
         </member>
         <member name="M:SolidCore.Coroutines.SequenceBuilder.Build(SolidCore.Coroutines.CoroutineAllocator)">
             <summary>Bakes accumulated steps into an allocator-owned template and frees scratch memory; not reusable afterwards.</summary>
@@ -383,11 +420,13 @@
         <member name="F:SolidCore.Coroutines.YieldInstructionData.Int0">
             <summary>Int payload (e.g. frame count).</summary>
         </member>
-        <member name="F:SolidCore.Coroutines.YieldInstructionData.Predicate">
-            <summary>Unmanaged predicate for <see cref="F:SolidCore.Coroutines.YieldInstructionType.WaitUntil"/>.</summary>
-        </member>
-        <member name="F:SolidCore.Coroutines.YieldInstructionData.Action">
-            <summary>Unmanaged action for <see cref="F:SolidCore.Coroutines.YieldInstructionType.Do"/>.</summary>
+        <member name="F:SolidCore.Coroutines.YieldInstructionData.CallbackId">
+            <summary>
+            Handle into the managed callback registry (<see cref="T:SolidCore.Coroutines.CoroutineCallbacks"/>) for
+            <see cref="F:SolidCore.Coroutines.YieldInstructionType.WaitUntil"/> and <see cref="F:SolidCore.Coroutines.YieldInstructionType.Do"/>;
+            <c>0</c> means no callback. Storing an id rather than the delegate itself keeps this struct
+            blittable so it can live in native <c>BurstArray</c> storage.
+            </summary>
         </member>
         <member name="T:SolidCore.Coroutines.YieldInstructionType">
             <summary>Discriminator selecting the active payload of <see cref="T:SolidCore.Coroutines.YieldInstructionData"/>.</summary>
@@ -402,10 +441,10 @@
             <summary>Wait a number of scheduler ticks.</summary>
         </member>
         <member name="F:SolidCore.Coroutines.YieldInstructionType.WaitUntil">
-            <summary>Wait until an unmanaged predicate returns non-zero.</summary>
+            <summary>Wait until a managed predicate returns <c>true</c>.</summary>
         </member>
         <member name="F:SolidCore.Coroutines.YieldInstructionType.Do">
-            <summary>Run an unmanaged action, then advance.</summary>
+            <summary>Run a managed action, then advance.</summary>
         </member>
         <member name="T:SolidCore.Coroutines.CoroutineDiagnostics">
             <summary>Merged cross-shard snapshot of a <see cref="T:SolidCore.Coroutines.CoroutineJobSystem"/>'s stats (counts summed, timings max/sum); gather between frames via <see cref="M:SolidCore.Coroutines.CoroutineJobSystem.GetDiagnostics"/>.</summary>
@@ -453,7 +492,7 @@
             <inheritdoc/>
         </member>
         <member name="T:SolidCore.Coroutines.CoroutineRuntime">
-            <summary>Helpers callable from inside a running coroutine (unmanaged action) to spawn into the shard/runner currently ticking on this thread — lock-free, never crosses a thread boundary.</summary>
+            <summary>Helpers callable from inside a running coroutine (a <c>Yield.Do</c> action) to spawn into the shard/runner currently ticking on this thread — lock-free, never crosses a thread boundary.</summary>
         </member>
         <member name="P:SolidCore.Coroutines.CoroutineRuntime.HasCurrentShard">
             <summary>True when called from within a ticking scheduler (worker shard or single-threaded runner).</summary>

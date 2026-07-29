@@ -1,8 +1,8 @@
 {
   "name": "com.solidcore.coroutines",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "SolidCore Coroutines",
-  "description": "Zero-allocation, struct-based coroutine scheduler for Unity — a single-threaded runner and a multi-threaded job system that tick thousands of coroutines with no GC. Standalone: depends only on the bundled SolidCore.Burst.",
+  "description": "Zero-allocation, struct-based coroutine scheduler for Unity — a single-threaded runner and a multi-threaded job system that tick thousands of coroutines with no GC. Yield.Do/Yield.WaitUntil take ordinary managed delegates (IL2CPP/Mono-compatible). Standalone: depends only on the bundled SolidCore.Burst and SolidCore.Collections.",
   "unity": "6000.0",
   "author": "Aaron Grincewicz"
 }

@@ -8,8 +8,9 @@ Asset Store product. A single-threaded `CoroutineRunner` and a multi-threaded
 
 ```
 Runtime/Plugins/
-  SolidCore.Coroutines.dll (+ .xml)   ← the scheduler (netstandard2.1)
-  SolidCore.Burst.dll      (+ .xml)   ← its only dependency (unmanaged collections)
+  SolidCore.Coroutines.dll  (+ .xml)   ← the scheduler (netstandard2.1)
+  SolidCore.Burst.dll       (+ .xml)   ← dependency: native instruction storage (BurstArray<T>)
+  SolidCore.Collections.dll (+ .xml)   ← dependency: FastList<T> for the managed callback registry
 ```
 
 Consumed as precompiled assemblies (`netstandard2.1`, the compatibility level Unity
@@ -30,7 +31,14 @@ git submodule add git@github.com:ASGrincewicz/SolidCore_Coroutines_for_Unity.git
 using SolidCore.Coroutines;
 
 using var runner = CoroutineRunner.Create(expectedPeak: 10_000);
-var seq = runner.Sequence().Do(&Step).WaitForSeconds(0.1f).Do(&Step).Build();
+
+// Do(Action) and WaitUntil(Func<bool>) take ordinary managed delegates — IL2CPP/Mono friendly.
+var seq = runner.Sequence()
+    .Do(() => Debug.Log("step"))
+    .WaitForSeconds(0.1f)
+    .Do(() => Debug.Log("step"))
+    .Build();
+
 runner.StartAndRun(seq, count: 10_000);   // or runner.Tick(dt) each frame
 ```
 
@@ -40,6 +48,8 @@ Built from the [SolidCore](https://github.com/ASGrincewicz/SolidCore) repo:
 
 ```
 dotnet build SolidCore.Coroutines/SolidCore.Coroutines.csproj -c Release
-cp SolidCore.Coroutines/bin/Release/netstandard2.1/SolidCore.Coroutines.{dll,xml} <this>/Runtime/Plugins/
-cp SolidCore.Burst/bin/Release/netstandard2.1/SolidCore.Burst.{dll,xml}           <this>/Runtime/Plugins/
+# The Coroutines build output also contains its dependency assemblies:
+cp SolidCore.Coroutines/bin/Release/netstandard2.1/SolidCore.Coroutines.{dll,xml}  <this>/Runtime/Plugins/
+cp SolidCore.Coroutines/bin/Release/netstandard2.1/SolidCore.Burst.{dll,xml}       <this>/Runtime/Plugins/
+cp SolidCore.Coroutines/bin/Release/netstandard2.1/SolidCore.Collections.{dll,xml} <this>/Runtime/Plugins/
 ```
