@@ -228,6 +228,18 @@
         <member name="P:SolidCore.Coroutines.CoroutineScheduler.ActiveCount">
             <summary>Live (running/waiting) coroutine count. O(1) — maintained incrementally.</summary>
         </member>
+        <member name="M:SolidCore.Coroutines.CoroutineScheduler.#ctor">
+            <summary>
+            Allocates scheduler state at the default capacity (128).
+            <para>
+            This explicit parameterless constructor is required: for a struct, <c>new CoroutineScheduler()</c>
+            does <b>not</b> bind to <see cref="M:SolidCore.Coroutines.CoroutineScheduler.#ctor(System.Int32)"/> even though its parameter is optional —
+            it invokes the implicit zero-init constructor, which would leave every backing list with a null
+            buffer and zero capacity. Without this, the first coroutine started would write into unallocated
+            native memory.
+            </para>
+            </summary>
+        </member>
         <member name="M:SolidCore.Coroutines.CoroutineScheduler.#ctor(System.Int32)">
             <summary>Allocates scheduler state for <paramref name="initialCapacity"/> coroutines.</summary>
         </member>
