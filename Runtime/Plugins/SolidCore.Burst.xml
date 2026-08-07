@@ -16,6 +16,12 @@
         <member name="P:SolidCore.Burst.BurstArray`1.Item(System.Int32)">
             <summary>Reference to the element at <paramref name="index"/>. No bounds check.</summary>
         </member>
+        <member name="M:SolidCore.Burst.BurstArray`1.AsSpan">
+            <summary>Mutable view over all <see cref="P:SolidCore.Burst.BurstArray`1.Length"/> elements. Invalidated by <see cref="M:SolidCore.Burst.BurstArray`1.Dispose"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.BurstArray`1.AsReadOnlySpan">
+            <summary>Read-only view over all <see cref="P:SolidCore.Burst.BurstArray`1.Length"/> elements. Invalidated by <see cref="M:SolidCore.Burst.BurstArray`1.Dispose"/>.</summary>
+        </member>
         <member name="M:SolidCore.Burst.BurstArray`1.Dispose">
             <summary>Frees the backing memory and resets to empty.</summary>
         </member>
@@ -60,6 +66,27 @@
         </member>
         <member name="M:SolidCore.Burst.BurstMap`2.Remove(`0@)">
             <summary>Removes <paramref name="key"/> with backward-shift compaction; false if absent.</summary>
+        </member>
+        <member name="T:SolidCore.Burst.Simd">
+            <summary>Portable SIMD over contiguous <see cref="T:System.Single"/> buffers via <see cref="T:System.Numerics.Vector`1"/> — the only vector API on netstandard2.1 (accelerated on RyuJIT, software fallback on Mono/IL2CPP). Unaligned load/store; scalar tail matches the vector body bit-for-bit.</summary>
+        </member>
+        <member name="P:SolidCore.Burst.Simd.IsHardwareAccelerated">
+            <summary>True when <see cref="T:System.Numerics.Vector`1"/> is JIT-accelerated on this platform.</summary>
+        </member>
+        <member name="P:SolidCore.Burst.Simd.FloatWidth">
+            <summary>Lane count of <see cref="T:System.Numerics.Vector`1"/> for <see cref="T:System.Single"/> on this platform.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.Simd.SubtractInPlace(System.Single*,System.Int32,System.Single)">
+            <summary>Subtracts <paramref name="scalar"/> from the first <paramref name="count"/> floats at <paramref name="data"/>, in place.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.Simd.SubtractInPlaceAnyLessOrEqualZero(System.Single*,System.Int32,System.Single)">
+            <summary>As <see cref="M:SolidCore.Burst.Simd.SubtractInPlace(System.Single*,System.Int32,System.Single)"/>, also returning whether any result is ≤ 0 — a fast-reject "did any timer expire" signal.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.Simd.SubtractInPlace(System.Span{System.Single},System.Single)">
+            <summary>Span convenience overload of <see cref="M:SolidCore.Burst.Simd.SubtractInPlace(System.Single*,System.Int32,System.Single)"/>.</summary>
+        </member>
+        <member name="M:SolidCore.Burst.Simd.SubtractInPlaceAnyLessOrEqualZero(System.Span{System.Single},System.Single)">
+            <summary>Span convenience overload of <see cref="M:SolidCore.Burst.Simd.SubtractInPlaceAnyLessOrEqualZero(System.Single*,System.Int32,System.Single)"/>.</summary>
         </member>
         <member name="T:BurstList`1">
             <summary>Growable list in unmanaged memory. Not GC-tracked; caller must <see cref="M:BurstList`1.Dispose"/>.</summary>
